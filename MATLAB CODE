@@ -1,0 +1,63 @@
+clc;
+clear;
+close all;
+
+% Parameters
+N = 64;              % Number of subcarriers
+SNR_dB = 0:5:30;     % SNR range
+numIter = 1000;      % Number of iterations
+
+mse_ls = zeros(size(SNR_dB));
+mse_mmse = zeros(size(SNR_dB));
+
+for k = 1:length(SNR_dB)
+
+    snr = 10^(SNR_dB(k)/10);
+
+    mse1 = 0;
+    mse2 = 0;
+
+    for iter = 1:numIter
+
+        % Generate transmitted pilot symbols
+        X = (randn(N,1)+1i*randn(N,1))/sqrt(2);
+
+        % Generate channel coefficients
+        H = (randn(N,1)+1i*randn(N,1))/sqrt(2);
+
+        % AWGN noise
+        noise = (randn(N,1)+1i*randn(N,1))/sqrt(2*snr);
+
+        % Received signal
+        Y = H .* X + noise;
+
+        %% Least Squares (LS) Estimation
+        H_ls = Y ./ X;
+
+        %% MMSE Estimation
+        Rhh = eye(N);              % Channel covariance matrix
+        sigma2 = 1/snr;           % Noise variance
+
+        W = Rhh /(Rhh + sigma2*eye(N));
+        H_mmse = W * H_ls;
+
+        %% MSE Calculation
+        mse1 = mse1 + mean(abs(H - H_ls).^2);
+        mse2 = mse2 + mean(abs(H - H_mmse).^2);
+
+    end
+
+    mse_ls(k) = mse1/numIter;
+    mse_mmse(k) = mse2/numIter;
+end
+
+%% Plot MSE vs SNR
+figure;
+semilogy(SNR_dB,mse_ls,'-o','LineWidth',2);
+hold on;
+semilogy(SNR_dB,mse_mmse,'-s','LineWidth',2);
+grid on;
+xlabel('SNR (dB)');
+ylabel('Mean Square Error (MSE)');
+title('MMSE vs LS Channel Estimation in VLC');
+legend('LS','MMSE');
